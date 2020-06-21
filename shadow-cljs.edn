@@ -1,0 +1,44 @@
+{:deps
+ {:aliases [:dev]}
+
+ :nrepl
+ {:port 9000}
+
+ :builds
+ {:main        {:target            :browser
+                :output-dir        "resources/public/js/main"
+                :asset-path        "/js/main"
+                :module-hash-names true
+                :modules           {:main {:init-fn dv.pathom-wp.client.client-entry/init
+                                           :entries [dv.pathom-wp.client.client-entry]}}
+                ;; guardrails checks only during dev
+                :dev               {:compiler-options {:external-config {:guardrails {}
+                                                                         :fulcro     {:wrap-inputs? false}}}
+                                    :closure-defines  {
+                                                       dv.pathom-wp.client.application/LOG-RESPONSES true
+                                                       dv.pathom-wp.client.client-entry/LOG_LEVEL    "debug"}}
+                :devtools          {:after-load dv.pathom-wp.client.client-entry/refresh
+                                    :preloads   [;; if using the chrome extension:
+                                                 com.fulcrologic.fulcro.inspect.preload
+
+                                                 ;; if using the electron app:
+                                                 ;com.fulcrologic.fulcro.inspect.websocket-preload
+
+                                                 dv.pathom-wp.client.development-preload]
+                                    :http-port 8021
+                                    :http-resource-root "public"
+                                    :http-root          "resources/public/"
+                                    }}
+     :devcards {:target     :browser
+                :output-dir "resources/public/devcards/js"
+                :asset-path "/js"
+
+                :modules    {:devcards {:entries [dv.pathom-wp.devcards]
+                                        :init-fn dv.pathom-wp.devcards/main}}
+
+                :devtools   {:http-port        4001
+                             :http-root        "resources/public/devcards"
+                             :push-state/index "devcards.html"
+                             :after-load       dv.pathom-wp.devcards/main}
+                :compiler-options {:devcards true}}
+}}
