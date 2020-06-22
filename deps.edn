@@ -4,27 +4,19 @@
            org.clojure/spec.alpha              {:mvn/version "0.2.187"}
            com.taoensso/timbre                 {:mvn/version "4.10.0"}
            com.taoensso/tufte                  {:mvn/version "2.1.0"}
-
+           funcool/httpurr                     {:mvn/version "2.0.0"}
            com.fulcrologic/fulcro              {:mvn/version "3.2.9"
                                                 :exclusions  [com.cognitect/transit-cljs
                                                               com.cognitect/transit-js]}
-
            com.cognitect/transit-cljs          {:mvn/version "0.8.264"}
-           com.wsscode/async                   {:mvn/version "1.0.10"}
-
-
            com.fulcrologic/semantic-ui-wrapper {:mvn/version "1.0.1"}
            com.fulcrologic/guardrails          {:mvn/version "0.0.12"}
            dv/clj-utils                        {:mvn/version "2020-06-09-b"}
-
            sablono                             {:mvn/version "0.8.6"}
            org.clojure/core.async              {:mvn/version "1.2.603"}
-
-           com.wsscode/pathom                  {:mvn/version "2.2.31"}
-
-
-           metosin/reitit                      {:mvn/version "0.5.2"}
-           }
+           com.wsscode/async                   {:mvn/version "1.0.10"}
+           com.wsscode/pathom                  {:mvn/version "2.3.0-alpha9"}
+           metosin/reitit                      {:mvn/version "0.5.2"}}
 
  :aliases {:depstar {:extra-deps {seancorfield/depstar {:mvn/version "1.0.94"}}}
            :dev     {:extra-paths ["src/dev" "src/devcards"]
@@ -35,7 +27,7 @@
                                    thheller/shadow-cljs                {:mvn/version "2.10.12"}
                                    com.fulcrologic/semantic-ui-wrapper {:mvn/version "1.0.0"}
                                    devcards                            {:mvn/version "0.2.7"}
-                                   dv/cljs-emotion                     {:mvn/version "version-two"}
+                                   dv/cljs-emotion                     {:mvn/version "2020-06-21"}
                                    ;; Formats spec explain.
                                    expound                             {:mvn/version "0.8.4"}
                                    fulcrologic/fulcro-spec             {:mvn/version "3.1.4"}

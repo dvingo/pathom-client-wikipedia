@@ -1,15 +1,21 @@
 (ns dv.pathom-wp.client.wp-resolvers
   (:require
+    [cljs.core.async :refer [<! chan put! go go-loop]]
     [clojure.string :as str]
+    [httpurr.client :as http]
+    [httpurr.client.xhr :refer [client]]
+    [com.wsscode.async.async-cljs :as wa :refer [<!p <?]]
     [com.wsscode.pathom.connect :as pc]
     [com.wsscode.pathom.core :as p]
-    [cljs.core.async :refer [<! chan put! go go-loop]]
     [taoensso.timbre :as log])
   (:import
     [goog.string Const]
     [goog.html TrustedResourceUrl]
     [goog Uri]
     [goog.net Jsonp XhrIo EventType]))
+
+(defn log [& args]
+  (.apply (.-log js/console) js/console (to-array args)))
 
 (def base-uri "https://en.wikipedia.org/w/api.php?")
 
@@ -47,30 +53,98 @@
     (.listen x EventType/COMPLETE
       (fn [a]
         (log/info "output" (-> (.getResponseJson x)
-                    js->clj
-                    (get 1)
-                    ))
+                             js->clj
+                             (get 1)
+                             ))
         (log/info "json:" (js->clj (.getResponseJson x)))))
     (.send x (search-uri "apple")))
   )
 
+
+(comment
+  (go
+    (log "response: "
+      (<!p
+        (http/send! client
+          {:method :get
+           :url    (search-uri "apple")}))))
+  )
+(defn decode
+  [response]
+  (update response :body #(js->clj (js/JSON.parse %) :keywordize-keys true)))
+
+(comment
+  ;; execute a search
+
+  (let [query "apples"]
+    (go
+      (let [resp
+                 (<!p (http/send! client
+                        {:method :get
+                         :url    "https://en.wikipedia.org/w/api.php"
+                         :query-params
+                                 {:action "opensearch" :origin "*" :format "json" :search query}}))
+
+            resp (decode resp)
+            out  (-> resp :body (get 1))]
+        (def resp2 resp)
+        (log "resp: " resp)
+        (log "out : " out)
+        )))
+
+
+  (-> resp2 :body (get 1))
+  )
+
+(comment
+  ;; execute a preview ("extract")
+  (go
+    (->
+      (http/send! client
+        {:method :get
+         :url    "https://en.wikipedia.org/w/api.php"
+         :query-params
+                 {:action  "query"
+                  :origin  "*"
+                  :prop    "extracts"
+                  :exchars 1000
+                  :exlimit 1
+                  :format  "json" :titles "Appleseed Ex Machina"}})
+      <!p
+      decode
+      :body
+      :query
+      :pages
+      vals
+      first
+      (select-keys [:title :extract])
+      log
+      )
+
+    )
+
+  ;["action=query" "prop=extracts" "exchars=1000" "format=json"
+  ; (str "titles=" page-title)]
+
+  )
+
 (comment
 
-   (Uri. (wp-preview-uri "Apple-designed processors"))
+  (Uri. (wp-preview-uri "Apple-designed processors"))
   )
 
 (comment
   (wp-preview-uri "test")
   (TrustedResourceUrl/fromConstant
     (.from Const
-      (wp-preview-uri "test")) ) )
+      (wp-preview-uri "test"))))
 
 (defn mk-uri
   [uri]
   (TrustedResourceUrl/format (.from Const uri)))
 
 (comment
-  (mk-uri )
+  (mk-uri)
   (.parse Uri "hi")
 
   (.send (Jsonp. (mk-uri (search-uri "apple")))
@@ -131,7 +205,7 @@
   (.send (Jsonp.
            (TrustedResourceUrl/format
              (.from Const "https://www.google.com/search?q=%{query}")
-             #js{:query "apple"}) )
+             #js{:query "apple"}))
     nil (fn [answer]
           (log/info "answer: " answer))
     )
