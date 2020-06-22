@@ -3,7 +3,7 @@
     [com.wsscode.pathom.connect :as pc]
     [com.wsscode.pathom.core :as p]))
 
-(defn parser [resolvers]
+(defn make-parser [resolvers]
   (p/parallel-parser
     {::p/env     {::p/reader               [p/map-reader
                                             pc/parallel-reader

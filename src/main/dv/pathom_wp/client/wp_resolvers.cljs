@@ -30,20 +30,17 @@
   (let [x (XhrIo.)]
     (.listen x EventType/COMPLETE
       (fn [a]
-        (log/info "answer: " a)
-        (log/info "body:" (.getResponseBody x))
-        (log/info "json:" (.getResponseJson x))
-        (log/info "text:" (.getResponseText x))
-        (log/info "type:" (.getResponseType x))
-        ))
+        (log/info "output" (-> (.getResponseJson x)
+                    js->clj
+                    (get 1)
+                    ))
+        (log/info "json:" (js->clj (.getResponseJson x)))))
     (.send x (search-uri "apple")))
-  (.send XhrIo
-    (search-uri "apple")
-    (fn [r] (log/info "got r: " r)
-      (log/info "status " (.getStatus r))
-      (log/info "body " (.getResponseBody r))
-      )
-    )
+  )
+
+(comment
+
+   (Uri. (wp-preview-uri "Apple-designed processors"))
   )
 
 (comment
@@ -131,8 +128,9 @@
   )
 
 (pc/defresolver fetch-a-thing [env params]
-  {::pc/output [:a-thing]}
+  {::pc/output [:search]}
   (log/info "In get a thing")
+  {:search "Did it work?"}
   )
 
 (def resolvers [fetch-a-thing])
