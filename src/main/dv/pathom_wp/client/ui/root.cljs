@@ -5,6 +5,9 @@
     [com.fulcrologic.fulcro.dom :as dom :refer [div]]
     [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]
     [com.fulcrologic.fulcro.ui-state-machines :as sm]
+    [com.fulcrologic.fulcro.mutations :as m]
+    [com.fulcrologic.fulcro.data-fetch :as df]
+    [dv.fulcro-util :as fu]
     [dv.pathom-wp.client.ui.task-item :refer [ui-task-list TaskList TaskForm ui-task-form]]
     [dv.pathom-wp.client.application :refer [SPA]]
     [dv.pathom-wp.client.router :as r]
@@ -17,18 +20,18 @@
 
 (def ui-top-router (c/factory TopRouter))
 
-(defsc PageContainer [this {:root/keys [router] :as props}]
+(defsc Root [this {:root/keys [router] :keys [search] :as props}]
   {:query         [{:root/router (c/get-query TopRouter)}
+                   [:search '_]
                    [::sm/asm-id ::TopRouter]]
-   :ident         (fn [] [:component/id :page-container])
    :initial-state (fn [_] {:root/router (c/get-initial-state TopRouter {})})}
   [:.ui.container
    [:.ui.secondary.pointing.menu (mapv r/link [:root])]
-   ^:inline (ui-top-router router)])
+   (fu/props-data-debug this true)
+   [:button {:on-click
+             #(df/load! this :search nil {:params {:query "apple"}})} "Search"]
+   [:div
+    "search: "
+    (for [s search]
+      [:div {:key s} s])]])
 
-(def ui-page-container (c/factory PageContainer))
-
-(defsc Root [_ {:root/keys [page-container]}]
-  {:query         [{:root/page-container (c/get-query PageContainer)}]
-   :initial-state (fn [_] {:root/page-container (c/get-initial-state PageContainer {})})}
-  ^:inline (ui-page-container page-container))

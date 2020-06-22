@@ -14,8 +14,77 @@
     [goog Uri]
     [goog.net Jsonp XhrIo EventType]))
 
+(defn decode
+  [response]
+  (update response :body #(js->clj (js/JSON.parse %) :keywordize-keys true)))
+
 (defn log [& args]
   (.apply (.-log js/console) js/console (to-array args)))
+
+(defn wp-search
+  "
+  Notes on response shapes
+  https://www.mediawiki.org/wiki/API:Data_formats
+
+  https://en.wikipedia.org/wiki/Special:ApiSandbox#action=opensearch&search=Te
+  "
+  [query]
+  (go
+    (->
+      (http/send! client
+            {:method :get
+             :url    "https://en.wikipedia.org/w/api.php"
+             :query-params
+                     {:action "opensearch" :origin "*" :format "json" :search query}})
+      <!p decode :body second)))
+
+(comment
+  (go
+    (let [r (<! (wp-search "Apple"))]
+      (log r)
+      )))
+
+(defn wp-preview
+  "
+  Return a channel.
+
+https://www.mediawiki.org/wiki/API:Query
+list=random for a random list of pages
+
+ https://en.wikipedia.org/w/api.php?action=help&modules=query
+ https://en.wikipedia.org/w/api.php?action=help&modules=query%2Bextracts
+
+ https://www.mediawiki.org/wiki/API:Tutorial#How_to_use_it
+  "
+  [title]
+  (go
+    (->
+      (http/send! client
+        {:method :get
+         :url    "https://en.wikipedia.org/w/api.php"
+         :query-params
+                 {:action  "query"
+                  :origin  "*"
+                  ;; can also do links, info, categories, templates,
+                  :prop    "extracts"
+                  :exchars 1000
+                  :exlimit 1
+                  :format  "json"
+                  :titles title}})
+      <!p decode
+      :body :query :pages
+      vals first :extract)))
+
+(comment
+  (go (log (<! (wp-preview "Apple"))))
+
+  (go
+    (let [r (<! (wp-search "Apple"))
+          _ (log "preview for: " (second r))
+          r2 (<! (wp-preview (second r)))]
+      (log "r2: " r2)
+      ))
+  )
 
 (def base-uri "https://en.wikipedia.org/w/api.php?")
 
@@ -69,9 +138,6 @@
           {:method :get
            :url    (search-uri "apple")}))))
   )
-(defn decode
-  [response]
-  (update response :body #(js->clj (js/JSON.parse %) :keywordize-keys true)))
 
 (comment
   ;; execute a search
@@ -91,8 +157,6 @@
         (log "resp: " resp)
         (log "out : " out)
         )))
-
-
   (-> resp2 :body (get 1))
   )
 
@@ -119,20 +183,9 @@
       first
       (select-keys [:title :extract])
       log
-      )
-
-    )
-
-  ;["action=query" "prop=extracts" "exchars=1000" "format=json"
-  ; (str "titles=" page-title)]
-
-  )
-
+      )))
 (comment
-
-  (Uri. (wp-preview-uri "Apple-designed processors"))
-  )
-
+  (Uri. (wp-preview-uri "Apple-designed processors")))
 (comment
   (wp-preview-uri "test")
   (TrustedResourceUrl/fromConstant
@@ -175,7 +228,7 @@
 (defn get-page-loop [c]
   (go-loop [[page title cb] (<! c)]
     (let [id      (-> (aget page "query" "pages")
-                    js/Object.keys first)
+                    js-keys first)
           preview (aget page "query" "pages" id "extract")
           preview (.substring preview 0 (- (.-length preview) 3))]
       (cb {:search/pages-by-name {title {:preview preview :name title}}})
@@ -190,37 +243,15 @@
 
 (comment
   (go (<! (jsonp (mk-uri (search-uri "apple")))))
-
-
-  (search-uri "apple")
-  (put! send-chan "apple")
-  (js/console.log "HI")
-  (jsonp (chan) (search-uri "apple"))
-  (Jsonp. (Uri. (search-uri "apple")))
-  (.send (Jsonp. (Uri. (search-uri "apple")))
-    nil (fn [answer]
-          (log/info "answer: " answer))
-    )
-
-  (.send (Jsonp.
-           (TrustedResourceUrl/format
-             (.from Const "https://www.google.com/search?q=%{query}")
-             #js{:query "apple"}))
-    nil (fn [answer]
-          (log/info "answer: " answer))
-    )
-  (TrustedResourceUrl/format
-    (.from Const "https://www.google.com/search?q=%{query}")
-    #js{:query "apple"})
-
-  (js-keys (Uri. (search-uri "apple")))
-  (TrustedResourceUrl/fromConstant "HI")
   )
 
-(pc/defresolver fetch-a-thing [env params]
+(pc/defresolver fetch-a-thing [{:keys [ast]} _]
   {::pc/output [:search]}
-  (log/info "In get a thing")
-  {:search "Did it work?"}
-  )
+  (let [query (-> ast :params :query)]
+    (if-not query
+      (throw (js/Error. "Missing query for search"))
+      (do (log/info "In search : query: " query)
+          (go
+            {:search (<! (wp-search query))})))))
 
 (def resolvers [fetch-a-thing])

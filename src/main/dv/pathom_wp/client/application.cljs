@@ -4,14 +4,13 @@
     [com.fulcrologic.fulcro.application :as app]
     [com.fulcrologic.fulcro.mutations :as m]
     [com.fulcrologic.fulcro.components :as c]
-    [com.fulcrologic.fulcro.networking.mock-server-remote :refer [mock-http-server]]
     [com.fulcrologic.fulcro.data-fetch :as df]
+    [com.fulcrologic.fulcro.networking.mock-server-remote :refer [mock-http-server]]
     [dv.pathom-wp.client.pathom-parser :refer [make-parser]]
     [dv.pathom-wp.client.wp-resolvers :as wp-resolvers]
     [dv.pathom-wp.client.prn-debug :refer [pprint-str]]
     [sablono.core :refer [html]]
     [taoensso.timbre :as log]))
-
 
 (def resolvers [wp-resolvers/resolvers])
 
@@ -29,23 +28,12 @@
                             (log/info "in TRANSMIT")
                             (go
                               (let [out (<! (parser env req))]
-                                (log/info "parser output: " out))))}))
+                                (log/info "parser output: " out)
+                                out)))}))
            this send-node))]
     {:transmit! (fn [this send-node]
                   (log/info "in outer transmit")
-                  (transmit! this send-node))})
-  )
-
-(comment
-  ((:transmit! (mock-http-server
-                 {:parser
-                  (fn [req]
-                    (log/info "in TRANSMIT")
-                    (let [out (parser {} req)]
-                      (log/info "parser output: " out)))}))
-   (go (<! {:active-requests []})) {})
-  )
-
+                  (transmit! this send-node))}))
 
 (m/defmutation search-term
   [{:keys [term]}]
@@ -59,7 +47,7 @@
      :render-middleware (fn [this render] (html (render)))}))
 
 (comment
-  (df/load! SPA :search nil { :params {:term "apple"}})
+  (df/load! SPA :search nil {:params {:query "apple"}})
 
-  (go (js/console.log "out" (<! (parser {} [:search]))))
+  (go (js/console.log "out" (<! (parser {} ['(:search {:query "Apple"})]))))
   )
