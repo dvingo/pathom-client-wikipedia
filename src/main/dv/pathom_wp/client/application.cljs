@@ -55,12 +55,7 @@
 
 (def SPA
   (app/fulcro-app
-    {:remotes           {:remote
-                         #_{:transmit! (fn [this send-node]
-                                         (js/console.log "IN MY RMEOTE2 ")
-                                         (log/info "IN MY REMOTE"))}
-                         (wp-remote parser {})
-                         }
+    {:remotes           {:remote (wp-remote parser {})}
      :render-middleware (fn [this render] (html (render)))}))
 
 (comment

@@ -26,6 +26,22 @@
       ["action=query" "prop=extracts" "exchars=1000" "format=json"
        (str "titles=" page-title)])))
 
+;;;
+;;; general notes:
+;;; user enters search term, we hit search-uri
+;;; you get back page titles that you can pass to the
+;;; "extracts" action which returns an html preview of the page
+;;; render that into a grid or list
+;;;;
+
+(comment
+  "
+  For example
+  this is a preview query:
+  https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exchars=1000&format=json&titles=apple-designed%20processors
+  ")
+;;;
+
 (comment
   (let [x (XhrIo.)]
     (.listen x EventType/COMPLETE
