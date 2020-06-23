@@ -39,10 +39,10 @@
   (go
     (->
       (http/send! client
-            {:method :get
-             :url    "https://en.wikipedia.org/w/api.php"
-             :query-params
-                     {:action "opensearch" :origin "*" :format "json" :search query}})
+        {:method :get
+         :url    "https://en.wikipedia.org/w/api.php"
+         :query-params
+                 {:action "opensearch" :origin "*" :format "json" :search query}})
       <!p decode :body second)))
 
 (comment
@@ -53,7 +53,7 @@
 
 (defn wp-preview
   "
-  Return a channel.
+  Returns a channel.
 
 https://www.mediawiki.org/wiki/API:Query
 list=random for a random list of pages
@@ -77,7 +77,7 @@ list=random for a random list of pages
                   :exchars 1000
                   :exlimit 1
                   :format  "json"
-                  :titles title}})
+                  :titles  title}})
       <!p decode
       :body :query :pages
       vals first :extract)))
@@ -86,8 +86,8 @@ list=random for a random list of pages
   (go (log (<! (wp-preview "Apple"))))
 
   (go
-    (let [r (<! (wp-search "Apple"))
-          _ (log "preview for: " (second r))
+    (let [r  (<! (wp-search "Apple"))
+          _  (log "preview for: " (second r))
           r2 (<! (wp-preview (second r)))]
       (log "r2: " r2)
       ))
@@ -253,22 +253,36 @@ list=random for a random list of pages
   )
 
 (pc/defmutation search-term [{:keys [ast]} params]
-  {::pc/sym 'dv.pathom-wp.client.application/search-term}
+  {::pc/sym 'dv.pathom-wp.client.ui.root/do-search}
   (let [query (-> ast :params :query)]
     (if-not query
       (throw (js/Error. "Missing query for search"))
       (do (log/info "In search : query: " query)
           (go
-            {:search (<! (wp-search query))}))))
-  )
+            {:search-term query
+             :result-list
+                          (->> (wp-search query)
+                            <!
+                            (mapv (fn [v] {:title v}))
+                            )}
+            )))))
 
 (pc/defresolver fetch-a-thing [{:keys [ast]} _]
-  {::pc/output [:search]}
+  {::pc/output [:search-term
+                {:result-list [:title]}]}
   (let [query (-> ast :params :query)]
     (if-not query
       (throw (js/Error. "Missing query for search"))
       (do (log/info "In search : query: " query)
           (go
-            {:search (<! (wp-search query))})))))
+            (let [ret
+                  {:search-term query
+                   :result-list
+                                (->> (wp-search query)
+                                  <!
+                                  (mapv (fn [v] {:title v}))
+                                  )}]
+                  (log/info "resolver returning: " ret)
+                  ret))))))
 
 (def resolvers [fetch-a-thing search-term])

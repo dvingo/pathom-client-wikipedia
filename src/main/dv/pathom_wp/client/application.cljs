@@ -36,14 +36,6 @@
                   (log/info "in outer transmit")
                   (transmit! this send-node))}))
 
-(m/defmutation search-term
-  [{:keys [query]}]
-  (action [_]
-    (log/info "In search-term"))
-  (remote [{:keys [ast]}]
-    (log/info "ast in remote search: " ast)
-    true))
-
 (def SPA
   (app/fulcro-app
     {:remotes           {:remote (wp-remote parser {})}
