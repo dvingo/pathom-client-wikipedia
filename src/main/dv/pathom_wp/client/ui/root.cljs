@@ -11,6 +11,7 @@
     [sablono.core :refer [html]]
     [dv.pathom-wp.client.prn-debug :refer [pprint]]
     [dv.fulcro-util :as fu]
+    [dv.cljs-emotion :refer [defstyled]]
     [dv.pathom-wp.client.ui.task-item :refer [ui-task-list TaskList TaskForm ui-task-form]]
     [dv.pathom-wp.client.application :refer [SPA]]
     [dv.pathom-wp.client.router :as r]
@@ -28,8 +29,25 @@
 
 (def ui-top-router (c/factory TopRouter))
 
-(defsc ResultItem [this props]
-  {:query [:title]})
+(defsc ResultItem [this {:keys [title extract]}]
+  {:query [:title :extract]}
+  [:.ui.card
+   [:.content
+    [:.ui.grid [:.twelve.wide.column [:.ui.header title]]]
+    [:.meta
+     [:.ui.tiny.relaxed.horizontal.list {:style {:margin-bottom 0}}
+      [:.item
+       [:.content
+        [:div {:dangerouslySetInnerHTML {:__html extract }}] ]]] ]] ] )
+
+(def ui-result-item (c/factory ResultItem {:keyfn :title}))
+
+
+(defstyled flex :div
+  {:display "flex"
+   :flex-wrap "wrap"
+   :align-items "baseline"
+   :justify-content "space-evenly"})
 
 (defsc SearchResult [_ {:keys [search-term result-list]}]
   {:query [:search-term {:result-list (c/get-query ResultItem)}]
@@ -37,9 +55,10 @@
   [:div
    [:h2 "Search term: " search-term]
    [:h2 "Results: "]
-   [:ul
-    (for [i result-list
-          :let [v (:title i)]] [:li {:key v} v])]])
+
+   (flex
+     (for [i result-list]
+       (ui-result-item i)))])
 (def ui-search-result (c/factory SearchResult))
 
 (m/defmutation do-search
@@ -63,6 +82,7 @@
       ;(log/spy mutation-ast)
       (log/spy result)
       (log/info "ok: " (keys env))
+      ;(dorun (map (fn [] ())))
 
       (fu/->s!
         state

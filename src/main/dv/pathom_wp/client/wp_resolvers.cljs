@@ -1,12 +1,13 @@
 (ns dv.pathom-wp.client.wp-resolvers
   (:require
-    [cljs.core.async :refer [<! chan put! go go-loop]]
+    [cljs.core.async :refer [<! chan put! go go-loop pipeline take! onto-chan! close!]]
     [clojure.string :as str]
     [httpurr.client :as http]
     [httpurr.client.xhr :refer [client]]
     [com.wsscode.async.async-cljs :as wa :refer [<!p <?]]
     [com.wsscode.pathom.connect :as pc]
     [com.wsscode.pathom.core :as p]
+    [dv.pathom-wp.client.wikipedia :as wp]
     [taoensso.timbre :as log])
   (:import
     [goog.string Const]
@@ -14,84 +15,8 @@
     [goog Uri]
     [goog.net Jsonp XhrIo EventType]))
 
-(comment
-  (wa/go-promise
-    (-> (js/fetch "/") <!p
-      .text <!p
-      log))
-  )
-
-(defn decode
-  [response]
-  (update response :body #(js->clj (js/JSON.parse %) :keywordize-keys true)))
-
 (defn log [& args]
   (.apply (.-log js/console) js/console (to-array args)))
-
-(defn wp-search
-  "
-  Notes on response shapes
-  https://www.mediawiki.org/wiki/API:Data_formats
-
-  https://en.wikipedia.org/wiki/Special:ApiSandbox#action=opensearch&search=Te
-  "
-  [query]
-  (go
-    (->
-      (http/send! client
-        {:method :get
-         :url    "https://en.wikipedia.org/w/api.php"
-         :query-params
-                 {:action "opensearch" :origin "*" :format "json" :search query}})
-      <!p decode :body second)))
-
-(comment
-  (go
-    (let [r (<! (wp-search "Apple"))]
-      (log r)
-      )))
-
-(defn wp-preview
-  "
-  Returns a channel.
-
-https://www.mediawiki.org/wiki/API:Query
-list=random for a random list of pages
-
- https://en.wikipedia.org/w/api.php?action=help&modules=query
- https://en.wikipedia.org/w/api.php?action=help&modules=query%2Bextracts
-
- https://www.mediawiki.org/wiki/API:Tutorial#How_to_use_it
-  "
-  [title]
-  (go
-    (->
-      (http/send! client
-        {:method :get
-         :url    "https://en.wikipedia.org/w/api.php"
-         :query-params
-                 {:action  "query"
-                  :origin  "*"
-                  ;; can also do links, info, categories, templates,
-                  :prop    "extracts"
-                  :exchars 1000
-                  :exlimit 1
-                  :format  "json"
-                  :titles  title}})
-      <!p decode
-      :body :query :pages
-      vals first :extract)))
-
-(comment
-  (go (log (<! (wp-preview "Apple"))))
-
-  (go
-    (let [r  (<! (wp-search "Apple"))
-          _  (log "preview for: " (second r))
-          r2 (<! (wp-preview (second r)))]
-      (log "r2: " r2)
-      ))
-  )
 
 (def base-uri "https://en.wikipedia.org/w/api.php?")
 
@@ -167,30 +92,7 @@ list=random for a random list of pages
   (-> resp2 :body (get 1))
   )
 
-(comment
-  ;; execute a preview ("extract")
-  (go
-    (->
-      (http/send! client
-        {:method :get
-         :url    "https://en.wikipedia.org/w/api.php"
-         :query-params
-                 {:action  "query"
-                  :origin  "*"
-                  :prop    "extracts"
-                  :exchars 1000
-                  :exlimit 1
-                  :format  "json" :titles "Appleseed Ex Machina"}})
-      <!p
-      decode
-      :body
-      :query
-      :pages
-      vals
-      first
-      (select-keys [:title :extract])
-      log
-      )))
+
 (comment
   (Uri. (wp-preview-uri "Apple-designed processors")))
 (comment
@@ -252,7 +154,7 @@ list=random for a random list of pages
   (go (<! (jsonp (mk-uri (search-uri "apple")))))
   )
 
-(pc/defmutation search-term [{:keys [ast]} params]
+#_(pc/defmutation search-term [{:keys [ast]} params]
   {::pc/sym 'dv.pathom-wp.client.ui.root/do-search}
   (let [query (-> ast :params :query)]
     (if-not query
@@ -261,11 +163,89 @@ list=random for a random list of pages
           (go
             {:search-term query
              :result-list
-                          (->> (wp-search query)
+                          (->> (wp/wp-search query)
                             <!
+                            ;; update to return
+                            ;{:title :extract}
+
                             (mapv (fn [v] {:title v}))
-                            )}
-            )))))
+                            )})))))
+
+(pc/defmutation search-term [{:keys [ast]} params]
+  {::pc/sym 'dv.pathom-wp.client.ui.root/do-search}
+  (let [query (-> ast :params :query)]
+    (if-not query
+      (throw (js/Error. "Missing query for search"))
+      (do (log/info "In search : query: " query)
+
+          (let [in (chan) out (chan) answer (chan)]
+            (go-loop [previews [] [title extract] (<! out)]
+              (log/info "previews: " previews)
+              (if (nil? extract)
+                (>! answer previews)
+
+                (let [v (<! extract)]
+                  (do (log "got extract " v)
+                      (recur (conj previews {:title title :extract v}) (<! out))))))
+
+            (go
+              (let [terms (<! (wp/wp-search query))]
+                (log/info "Terms: " terms)
+                (doseq [v terms]
+                  (put! out [v (wp/wp-preview v)]))
+                (close! out)
+
+                (let [answer-val (<! answer)]
+                  (log "answer: " answer-val)
+                  (log "final resp: "
+                    {:search-term query
+                     :result-list answer-val})
+                  {:search-term query
+                   :result-list answer-val}
+                  )))))
+
+      )))
+
+
+(comment
+  ;; here is what I want to do
+
+  ;; do search for term
+  ; get list of items back
+  ;; for each item do an http call in parallel await them all
+  ;; close channel
+
+  (let [in (chan) out (chan) answer (chan)]
+    (go-loop [previews [] extract (<! out)]
+      (log/info "previews: " previews)
+      (if (nil? extract)
+        (>! answer previews)
+        (let [v (<! extract)]
+          (do (log "got extract " v)
+              (recur (conj previews v) (<! out))))))
+
+    (go-loop [terms (<! (wp/wp-search "apple"))]
+      (log/info "Terms: " terms)
+      (doseq [v terms]
+        (put! out (wp/wp-preview v)))
+      (close! out))
+
+    (go (log "answer: " (<! answer)))
+    )
+
+  (let [in (chan) out (chan)]
+    (pipeline 10 out (map (fn [i]
+                            (log/info "in pipeline: " i)
+                            (wp/wp-preview i)))
+      in)
+    (go-loop [value (<! out)]
+      (log "Got value: " (<! value)))
+    (go
+      (onto-chan! in (<! (wp/wp-search "apple")))
+      )
+    )
+
+  )
 
 (pc/defresolver fetch-a-thing [{:keys [ast]} _]
   {::pc/output [:search-term
@@ -278,11 +258,11 @@ list=random for a random list of pages
             (let [ret
                   {:search-term query
                    :result-list
-                                (->> (wp-search query)
+                                (->> (wp/wp-search query)
                                   <!
                                   (mapv (fn [v] {:title v}))
                                   )}]
-                  (log/info "resolver returning: " ret)
-                  ret))))))
+              (log/info "resolver returning: " ret)
+              ret))))))
 
 (def resolvers [fetch-a-thing search-term])
