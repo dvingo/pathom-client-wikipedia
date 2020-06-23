@@ -34,7 +34,7 @@
   [:.ui.card
    [:.content
     [:.ui.grid [:.twelve.wide.column [:.ui.header title]]]
-    [:.meta
+    [:.description
      [:.ui.tiny.relaxed.horizontal.list {:style {:margin-bottom 0}}
       [:.item
        [:.content
@@ -51,7 +51,7 @@
 (defsc SearchResult [_ {:keys [search-term result-list]}]
   {:query [:search-term {:result-list (c/get-query ResultItem)}]
    :ident [:search-by/search-term :search-term]}
-  [:div
+  [:.ui.text.centered.section
    [:h2 "Search term: " search-term]
    [:h2 "Results: "]
 
@@ -102,20 +102,16 @@
   [:.ui.container
    [:.ui.secondary.pointing.menu (mapv r/link [:root])]
    ;(fu/props-data-debug this true)
-   [:button {:on-click #(df/load! this :search nil {:params {:query "apple"}})} "Search"]
-   (log/info "search: " search)
    [:div
-
-    [:.form {:class-name "" #_(when checked? "error") :as "div"
-             :on-submit  #(c/transact! this [(do-search {:query search-term})])
-             ;:on-change  (fn [e] true)
-             }
-     [:.field
+    [:form.ui.form {:class-name "" #_(when checked? "error")
+                    :on-submit  (fu/prevent-default
+                                  #(c/transact! this [(do-search {:query search-term})]))}
+     [:.ui.field
       (fu/ui-textfield this "Search: " :ui/search-term props :tabIndex 1
         :autofocus? true
         :onKeyDown #(when (e/enter? %)
-                      (c/transact! this [(do-search {:query search-term})])
-                      (log/info "GOT CHANGE")))]]
+                      (c/transact! this [(do-search {:query search-term})])))]
+     [:button.ui.button {:type "submit"} "Search"]]
     (ui-search-result current-search-result)]])
 
 (def ui-page (c/factory Page))
