@@ -27,6 +27,7 @@
                           (fn [req]
                             (log/info "in TRANSMIT")
                             (go
+                              ;; todo wrap in try catch ?
                               (let [out (<! (parser env req))]
                                 (log/info "parser output: " out)
                                 out)))}))
@@ -36,10 +37,12 @@
                   (transmit! this send-node))}))
 
 (m/defmutation search-term
-  [{:keys [term]}]
+  [{:keys [query]}]
   (action [_]
     (log/info "In search-term"))
-  (remote [_] true))
+  (remote [{:keys [ast]}]
+    (log/info "ast in remote search: " ast)
+    true))
 
 (def SPA
   (app/fulcro-app
@@ -47,6 +50,7 @@
      :render-middleware (fn [this render] (html (render)))}))
 
 (comment
+  (c/transact! SPA [(search-term {:query "fred"})])
   (df/load! SPA :search nil {:params {:query "apple"}})
 
   (go (js/console.log "out" (<! (parser {} ['(:search {:query "Apple"})]))))

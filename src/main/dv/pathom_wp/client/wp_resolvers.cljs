@@ -14,6 +14,13 @@
     [goog Uri]
     [goog.net Jsonp XhrIo EventType]))
 
+(comment
+  (wa/go-promise
+    (-> (js/fetch "/") <!p
+      .text <!p
+      log))
+  )
+
 (defn decode
   [response]
   (update response :body #(js->clj (js/JSON.parse %) :keywordize-keys true)))
@@ -245,6 +252,16 @@ list=random for a random list of pages
   (go (<! (jsonp (mk-uri (search-uri "apple")))))
   )
 
+(pc/defmutation search-term [{:keys [ast]} params]
+  {::pc/sym 'dv.pathom-wp.client.application/search-term}
+  (let [query (-> ast :params :query)]
+    (if-not query
+      (throw (js/Error. "Missing query for search"))
+      (do (log/info "In search : query: " query)
+          (go
+            {:search (<! (wp-search query))}))))
+  )
+
 (pc/defresolver fetch-a-thing [{:keys [ast]} _]
   {::pc/output [:search]}
   (let [query (-> ast :params :query)]
@@ -254,4 +271,4 @@ list=random for a random list of pages
           (go
             {:search (<! (wp-search query))})))))
 
-(def resolvers [fetch-a-thing])
+(def resolvers [fetch-a-thing search-term])
