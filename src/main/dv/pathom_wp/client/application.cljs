@@ -42,8 +42,10 @@
      :render-middleware (fn [this render] (html (render)))}))
 
 (comment
-  (c/transact! SPA [(search-term {:query "fred"})])
-  (df/load! SPA :search nil {:params {:query "apple"}})
-
-  (go (js/console.log "out" (<! (parser {} ['(:search {:query "Apple"})]))))
+  (go
+    (js/console.log
+      (<! (parser {}
+            [{(list 'dv.pathom-wp.client.ui.root/do-search {:query "banana"})
+              [:search-term
+               {:result-list [:wp/title :wp/preview]}]}]))))
   )

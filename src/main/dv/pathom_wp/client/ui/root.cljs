@@ -29,8 +29,8 @@
 
 (def ui-top-router (c/factory TopRouter))
 
-(defsc ResultItem [this {:keys [title extract]}]
-  {:query [:title :extract]}
+(defsc ResultItem [this {:wp/keys [title preview]}]
+  {:query [:wp/title :wp/preview]}
   [:.ui.card
    [:.content
     [:.ui.grid [:.twelve.wide.column [:.ui.header title]]]
@@ -38,10 +38,9 @@
      [:.ui.tiny.relaxed.horizontal.list {:style {:margin-bottom 0}}
       [:.item
        [:.content
-        [:div {:dangerouslySetInnerHTML {:__html extract }}] ]]] ]] ] )
+        [:div {:dangerouslySetInnerHTML {:__html preview}}] ]]] ]] ] )
 
-(def ui-result-item (c/factory ResultItem {:keyfn :title}))
-
+(def ui-result-item (c/factory ResultItem {:keyfn :wp/title}))
 
 (defstyled flex :div
   {:display "flex"
@@ -116,11 +115,8 @@
         :autofocus? true
         :onKeyDown #(when (e/enter? %)
                       (c/transact! this [(do-search {:query search-term})])
-                      (log/info "GOT CHANGE"))
-
-        )]]
-    (ui-search-result current-search-result)
-    ]])
+                      (log/info "GOT CHANGE")))]]
+    (ui-search-result current-search-result)]])
 
 (def ui-page (c/factory Page))
 
