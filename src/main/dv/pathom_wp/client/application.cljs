@@ -5,7 +5,8 @@
     [dv.pathom-wp.client.wp-resolvers :as wp-resolvers]
     [dv.pathom-wp.client.prn-debug :refer [pprint-str]]
     [dv.pathom :refer [make-parser]]
-    [sablono.core :refer [html]]
+    [reagent.core :as r]
+    [reagent.dom :as rdom]
     [taoensso.timbre :as log]))
 
 (def resolvers [wp-resolvers/resolvers])
@@ -15,7 +16,8 @@
 (def SPA
   (app/fulcro-app
     {:remotes           {:remote (fu/local-remote parser {})}
-     :render-middleware (fn [this render] (html (render)))}))
+     :render-middleware (fn [this render] (r/as-element (render)))
+     :render-root!      rdom/render}))
 
 (comment
   (go

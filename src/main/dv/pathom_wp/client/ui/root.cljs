@@ -31,14 +31,12 @@
 
 (defsc ResultItem [this {:wp/keys [title preview]}]
   {:query [:wp/title :wp/preview]}
-  [:.ui.card
-   [:.content
-    [:.ui.grid [:.twelve.wide.column [:.ui.header title]]]
-    [:.description
-     [:.ui.tiny.relaxed.horizontal.list {:style {:margin-bottom 0}}
-      [:.item
-       [:.content
-        [:div {:dangerouslySetInnerHTML {:__html preview}}] ]]] ]] ] )
+  [:div.ui.card>div.content
+   [:div.ui.grid>div.twelve.wide.column>div.ui.header title]
+   [:div.description
+    [:div.ui.tiny.relaxed.horizontal.list {:style {:margin-bottom 0}}
+     [:div.item>div.content
+      [:div {:dangerouslySetInnerHTML {:__html preview}}]]]] ] )
 
 (def ui-result-item (c/factory ResultItem {:keyfn :wp/title}))
 
@@ -51,7 +49,7 @@
 (defsc SearchResult [_ {:keys [search-term result-list]}]
   {:query [:search-term {:result-list (c/get-query ResultItem)}]
    :ident [:search-by/search-term :search-term]}
-  [:.ui.text.centered.section
+  [:div.ui.text.centered.section
    [:h2 "Search term: " search-term]
    [:h2 "Results: "]
 
@@ -81,8 +79,6 @@
       ;(log/spy mutation-ast)
       (log/spy result)
       (log/info "ok: " (keys env))
-      ;(dorun (map (fn [] ())))
-
       (fu/->s!
         state
         (fu/conj-set :all-search-terms search-term)
@@ -99,14 +95,14 @@
                    [::sm/asm-id ::TopRouter]]
    :ident         (fn [_] [:component/id ::page])
    :initial-state (fn [_] {:root/router (c/get-initial-state TopRouter {})})}
-  [:.ui.container
-   [:.ui.secondary.pointing.menu (mapv r/link [:root])]
+  [:div.ui.container
+   [:div.ui.secondary.pointing.menu (map r/link [:root])]
    ;(fu/props-data-debug this true)
    [:div
     [:form.ui.form {:class-name "" #_(when checked? "error")
                     :on-submit  (fu/prevent-default
                                   #(c/transact! this [(do-search {:query search-term})]))}
-     [:.ui.field
+     [:div.ui.field
       (fu/ui-textfield this "Search: " :ui/search-term props :tabIndex 1
         :autofocus? true
         :onKeyDown #(when (e/enter? %)
@@ -119,4 +115,4 @@
 (defsc Root [_ {:root/keys [page]}]
   {:query         [{:root/page (c/get-query Page)}]
    :initial-state (fn [_] {:root/page (c/get-initial-state Page {})})}
-  ^:inline (ui-page page))
+  (ui-page page))

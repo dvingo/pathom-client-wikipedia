@@ -9,7 +9,6 @@
     [com.wsscode.pathom.core :as p]
     [taoensso.timbre :as log]))
 
-
 (comment
   (wa/go-promise
     (-> (js/fetch "/") <!p
@@ -88,64 +87,3 @@ list=random for a random list of pages
       ))
   )
 
-(comment
-  "
-  For example
-  this is a preview query:
-  https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exchars=1000&format=json&titles=apple-designed%20processors
-  ")
-
-(comment
-  (go
-    (log "response: "
-      (<!p
-        (http/send! client
-          {:method :get
-           :url    (search-uri "apple")}))))
-  )
-
-(comment
-  ;; execute a search
-
-  (let [query "apples"]
-    (go
-      (let [resp
-                 (<!p (http/send! client
-                        {:method :get
-                         :url    "https://en.wikipedia.org/w/api.php"
-                         :query-params
-                                 {:action "opensearch" :origin "*" :format "json" :search query}}))
-
-            resp (decode resp)
-            out  (-> resp :body (get 1))]
-        (def resp2 resp)
-        (log "resp: " resp)
-        (log "out : " out)
-        )))
-  (-> resp2 :body (get 1))
-  )
-
-(comment
-  ;; execute a preview ("extract")
-  (go
-    (->
-      (http/send! client
-        {:method :get
-         :url    "https://en.wikipedia.org/w/api.php"
-         :query-params
-                 {:action  "query"
-                  :origin  "*"
-                  :prop    "extracts"
-                  :exchars 1000
-                  :exlimit 1
-                  :format  "json" :titles "Appleseed Ex Machina"}})
-      <!p
-      decode
-      :body
-      :query
-      :pages
-      vals
-      first
-      (select-keys [:title :extract])
-      log
-      )))

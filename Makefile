@@ -5,8 +5,6 @@ SHELL := bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
-
-
 fe-module := main
 
 ifeq ($(origin .RECIPEPREFIX), undefined)
@@ -16,7 +14,7 @@ endif
 
 shadow-server:
 > yarn
-> yarn shadow-cljs server
+> yarn shadow-cljs server -A:guardrails
 
 fe:
 > bash ./scripts/start_dev.sh
