@@ -91,7 +91,7 @@
       ;; unknown page, redirect to root
       (do
         (log/info "No fulcro route matched the current URL, changing to the default route.")
-        (js/setTimeout #(rfe/push-state :root)))
+        #_(js/setTimeout #(rfe/push-state :root)))
 
       ;; route has redirect
       (if-let [{:keys [route params]} (get-in m [:data :redirect-to])]

@@ -95,8 +95,8 @@
          (fu/ui-textfield this "Task Description" :task/description props :tabIndex 1
            :autofocus? true))
 
-       [:.ui.grid
-        [:.column.four.wide
+       [:div.ui.grid
+        [:div.column.four.wide
          [:button
           {:tabIndex 2
            :disabled disabled?
