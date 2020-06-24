@@ -19,7 +19,6 @@
     [dv.fulcro-util :as fu]
     [dv.fulcro-entity-state-machine :as fmachine]
     [dv.pathom-wp.data-model.task :as dm]
-    [sablono.core :refer [html]]
     [taoensso.timbre :as log]))
 
 (defsc TaskItem
@@ -96,25 +95,25 @@
          (fu/ui-textfield this "Task Description" :task/description props :tabIndex 1
            :autofocus? true))
 
-       (html [:.ui.grid
-              [:.column.four.wide
-               [:button
-                {:tabIndex 2
-                 :disabled disabled?
-                 :onClick  (fu/prevent-default
-                             #(let [task (dm/fresh-task props)]
-                                (fmachine/submit-entity! this
-                                  {:entity          task
-                                   :machine         ::form-machine
-                                   :remote-mutation `create-task
-                                   :on-reset        cb-on-submit
-                                   :target          {:append [:all-tasks]}})))
-                 :class    (str "ui primary button" (when loading? " loading"))}
-                "Enter"]]
+       [:.ui.grid
+        [:.column.four.wide
+         [:button
+          {:tabIndex 2
+           :disabled disabled?
+           :onClick  (fu/prevent-default
+                       #(let [task (dm/fresh-task props)]
+                          (fmachine/submit-entity! this
+                            {:entity          task
+                             :machine         ::form-machine
+                             :remote-mutation `create-task
+                             :on-reset        cb-on-submit
+                             :target          {:append [:all-tasks]}})))
+           :class    (str "ui primary button" (when loading? " loading"))}
+          "Enter"]]
 
-              (when on-cancel
-                [:.column.four.wide
-                 [:button :.ui.secondary.button.column
-                  {:on-click on-cancel} "Cancel"]])]))]))
+        (when on-cancel
+          [:.column.four.wide
+           [:button :.ui.secondary.button.column
+            {:on-click on-cancel} "Cancel"]])])]))
 
 (def ui-task-form (c/factory TaskForm {:keyfn :task/id}))

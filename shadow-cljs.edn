@@ -1,5 +1,5 @@
 {:deps
- {:aliases [:dev :my-dev]}
+ {:aliases [:dev]}
 
  :nrepl
  {:port 9000}
